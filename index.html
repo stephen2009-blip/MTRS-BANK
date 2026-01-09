@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>MTRS BANK</title>
+
+  <style>
+    body {
+      margin: 0;
+      background: #ffffff;
+      color: #000000;
+      font-family: Arial, sans-serif;
+      text-align: center;
+    }
+
+    header {
+      background: #0a4cff;
+      color: white;
+      padding: 20px;
+      font-size: 28px;
+      font-weight: bold;
+    }
+
+    #screen {
+      margin-top: 60px;
+      font-size: 26px;
+      min-height: 40px;
+    }
+
+    input {
+      margin-top: 20px;
+      font-size: 20px;
+      padding: 10px;
+      width: 200px;
+      text-align: center;
+    }
+
+    button {
+      margin: 15px;
+      padding: 12px 24px;
+      font-size: 18px;
+      cursor: pointer;
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+
+<header>MTRS BANK</header>
+
+<div id="screen">Enter PIN</div>
+
+<!-- PIN ENTRY -->
+<div id="pinSection">
+  <input type="password" id="pinInput" placeholder="PIN">
+  <br>
+  <button id="pinBtn">ENTER</button>
+</div>
+
+<!-- AMOUNT ENTRY -->
+<div id="amountSection" class="hidden">
+  <input type="number" id="amountInput" placeholder="Amount">
+  <br>
+  <button id="amountBtn">WITHDRAW</button>
+</div>
+
+<script>
+  // -------- STATE --------
+  const CORRECT_PIN = "1234";
+  let processingTimer = null;
+  let dotCount = 0;
+
+  // -------- DOM READY --------
+  window.onload = function () {
+    document.getElementById("pinBtn").onclick = submitPin;
+    document.getElementById("amountBtn").onclick = submitAmount;
+  };
+
+  // -------- UI HELPERS --------
+  function setScreen(text) {
+    document.getElementById("screen").innerText = text;
+  }
+
+  // -------- PIN LOGIC --------
+  function submitPin() {
+    const pin = document.getElementById("pinInput").value;
+
+    if (pin === CORRECT_PIN) {
+      document.getElementById("pinSection").classList.add("hidden");
+      document.getElementById("amountSection").classList.remove("hidden");
+      setScreen("Enter Amount");
+    } else {
+      setScreen("Incorrect PIN");
+    }
+  }
+
+  // -------- AMOUNT LOGIC --------
+  function submitAmount() {
+    const amount = document.getElementById("amountInput").value;
+
+    if (amount === "" || amount <= 0 || amount % 100 !== 0) {
+      setScreen("Enter valid amount");
+      return;
+    }
+
+    document.getElementById("amountSection").classList.add("hidden");
+    startProcessing();
+    sendToArduino("START_TX_" + amount + "\n");
+  }
+
+  // -------- PROCESSING ANIMATION --------
+  function startProcessing() {
+    dotCount = 0;
+    setScreen("Processing");
+
+    processingTimer = setInterval(function () {
+      dotCount = (dotCount + 1) % 4;
+      setScreen("Processing" + ".".repeat(dotCount));
+    }, 500);
+  }
+
+  // -------- TRANSACTION COMPLETE --------
+  function transactionDone() {
+    clearInterval(processingTimer);
+    setScreen("Transaction Complete. Thank You!");
+
+    setTimeout(resetATM, 2500);
+  }
+
+  function resetATM() {
+    document.getElementById("pinInput").value = "";
+    document.getElementById("amountInput").value = "";
+
+    document.getElementById("amountSection").classList.add("hidden");
+    document.getElementById("pinSection").classList.remove("hidden");
+
+    setScreen("Enter PIN");
+  }
+
+  // -------- CALLED FROM APP INVENTOR --------
+  function fromArduino(message) {
+    if (message.trim() === "TX_DONE") {
+      transactionDone();
+    }
+  }
+
+  // -------- PLACEHOLDER (OVERRIDDEN BY APP) --------
+  function sendToArduino(data) {
+    console.log("Sending:", data);
+  }
+</script>
+
+</body>
+</html>
